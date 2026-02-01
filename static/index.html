@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetBuffer Pro</title>
+    <style>
+        :root { --bg: #1e1e2e; --card: #2a2a3e; --text: #cdd6f4; --accent: #89b4fa; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { display: grid; gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: var(--accent); border-bottom: 1px solid #444; padding-bottom: 10px; }
+        textarea { width: 100%; height: 150px; background: #181825; color: var(--text); border: 1px solid #444; border-radius: 6px; padding: 10px; font-family: monospace; box-sizing: border-box; resize: vertical;}
+        .btn { background: var(--accent); color: #1e1e2e; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn:hover { opacity: 0.9; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #333; }
+        .file-info { display: flex; flex-direction: column; }
+        .meta { font-size: 0.8em; color: #7f849c; margin-top: 4px; }
+        a { color: var(--accent); text-decoration: none; }
+        #status { font-size: 0.8em; margin-left: 10px; color: #a6e3a1; opacity: 0; transition: opacity 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>📋 Sync Clipboard</h2>
+            <textarea id="clipInput" placeholder="Type or paste content here..."></textarea>
+            <div style="display: flex; align-items: center;">
+                <button class="btn" onclick="pushClipboard()">Sync to Network</button>
+                <span id="status">Synced!</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📂 File Buffer</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="file" id="fileInput" style="display: none" onchange="uploadFile()">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">+ Upload File</button>
+                <span id="uploadStatus" style="margin-left: 10px; font-size: 0.9em;"></span>
+            </div>
+            <div id="fileList"></div>
+        </div>
+    </div>
+
+    <script>
+        const evtSource = new EventSource("/events");
+        const clipInput = document.getElementById('clipInput');
+
+        // 1. SSE 监听事件
+        evtSource.addEventListener('clipboard', (e) => {
+            const data = JSON.parse(e.data);
+            // 如果当前输入框没有焦点，则更新，防止覆盖正在打字的内容
+            if (document.activeElement !== clipInput) {
+                clipInput.value = data.content;
+            }
+        });
+
+        evtSource.addEventListener('files_update', (e) => {
+            loadFiles(); // 收到信号，重新拉取列表
+        });
+
+        // 2. 剪贴板逻辑
+        async function pushClipboard() {
+            await fetch('/api/clipboard', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({content: clipInput.value})
+            });
+            showStatus();
+        }
+
+        async function initClipboard() {
+            const res = await fetch('/api/clipboard');
+            const data = await res.json();
+            clipInput.value = data.content;
+        }
+
+        // 3. 文件逻辑
+        async function uploadFile() {
+            const input = document.getElementById('fileInput');
+            if (input.files.length === 0) return;
+            
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            
+            document.getElementById('uploadStatus').innerText = "Uploading...";
+            await fetch('/api/upload', { method: 'POST', body: formData });
+            document.getElementById('uploadStatus').innerText = "";
+            input.value = ''; // Reset
+        }
+
+        async function loadFiles() {
+            const res = await fetch('/api/files');
+            const files = await res.json();
+            const container = document.getElementById('fileList');
+            
+            container.innerHTML = files.map(f => {
+                const size = (f.size / 1024 / 1024).toFixed(2) + ' MB';
+                const date = new Date(f.upload_time * 1000).toLocaleString();
+                return `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <strong>${f.filename}</strong>
+                            <span class="meta">${size} • ${date}</span>
+                        </div>
+                        <a href="/api/download/${f.id}" class="btn" style="padding: 5px 10px; font-size: 0.9em;">⬇ Download</a>
+                    </div>
+                `
+            }).join('');
+        }
+
+        function showStatus() {
+            const el = document.getElementById('status');
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 2000);
+        }
+
+        // Init
+        initClipboard();
+        loadFiles();
+    </script>
+</body>
+</html>
