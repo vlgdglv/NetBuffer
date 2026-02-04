@@ -38,11 +38,46 @@ async def init_db():
         
         await db.execute("INSERT OR IGNORE INTO clipboard (id, content, updated_at) VALUES (1, '', ?)", (time.time(),))
         await db.commit()
+
+async def cleanup_loop():
+    while True:
+        try:
+            await asyncio.sleep(100)
+            now = time.time()
+            async with aiosqlite.connect(DB_PATH) as db:
+                async with db.execute("SELECT id, filepath FROM files WHERE expires_at < ?", (now,)) as cursor:
+                    expired = await cursor.fetchall()
+                
+                if expired:
+                    print(f"[Cleanup] Found {len(expired)} expired files.")
+                    for pid, filepath in expired:
+                        if os.path.exists(filepath):
+                            try:
+                                os.remove(filepath)
+                            except OSError:
+                                pass
+                        await db.execute("DELETE FROM files WHERE id = ?", (pid,))
+                    await db.commit()
+                    if manager:
+                        await manager.broadcast("files_update", {"action": "cleanup"})
+                        
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[Cleanup Error] {e}")
         
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    task = asyncio.create_task(cleanup_loop())
     yield
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
     
 app = FastAPI(lifespan=lifespan)
 
@@ -71,7 +106,7 @@ manager = ConnectionManager()
 async def index():
     return FileResponse(os.path.join(BASE_DIR, "static/index.html"))
 
-@app.get("events")
+@app.get("/events")
 async def sse_endpoint(request: Request):
     queue = await manager.connect()
     
@@ -94,7 +129,6 @@ async def get_clipboard():
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute("SELECT content FROM clipboard WHERE id = 1") as cursor:
             row = await cursor.fetchone()
-            print(row)
             if row is None:
                 return {"content": "", "updated_at": 0}
             return {"content": row[0] if row else ""}
@@ -103,7 +137,6 @@ async def get_clipboard():
 async def update_clipboard(data: dict):
     content = data.get("content", [])
     async with aiosqlite.connect(DB_PATH) as db:
-        print(content)
         await db.execute("UPDATE clipboard SET content = ?, updated_at = ? WHERE id = 1", (content, time.time()))
         await db.commit()
         
@@ -130,7 +163,7 @@ async def upload_file(file: UploadFile, background_tasks: BackgroundTasks):
             buffer.write(content)
             size += len(content)
             
-    expires_at = time.time() + (24*60*60)
+    expires_at = time.time() + (1*60*60)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "INSERT INTO files (filename, filepath, size, upload_time, expires_at) VALUES (?, ?, ?, ?, ?)",

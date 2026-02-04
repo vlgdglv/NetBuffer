@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  netbuffer:
+    container_name: netbuffer
+
+    build: .
+    restart: unless-stopped
+    
+    ports:
+      - "8000:8000"
+      
+    volumes:
+      - ./uploads:/app/uploads
+      - ./db.sqlite:/app/db.sqlite
+      
+    environment:
+      - DATA_DIR=/app
