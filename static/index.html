@@ -1,25 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetBuffer Pro</title>
     <style>
-        :root { --bg: #1e1e2e; --card: #2a2a3e; --text: #cdd6f4; --accent: #89b4fa; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); max-width: 800px; margin: 0 auto; padding: 20px; }
-        .container { display: grid; gap: 20px; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; color: var(--accent); border-bottom: 1px solid #444; padding-bottom: 10px; }
-        textarea { width: 100%; height: 150px; background: #181825; color: var(--text); border: 1px solid #444; border-radius: 6px; padding: 10px; font-family: monospace; box-sizing: border-box; resize: vertical;}
-        .btn { background: var(--accent); color: #1e1e2e; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn:hover { opacity: 0.9; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #333; }
-        .file-info { display: flex; flex-direction: column; }
-        .meta { font-size: 0.8em; color: #7f849c; margin-top: 4px; }
-        a { color: var(--accent); text-decoration: none; }
-        #status { font-size: 0.8em; margin-left: 10px; color: #a6e3a1; opacity: 0; transition: opacity 0.5s; }
+        :root {
+            --bg: #1e1e2e;
+            --card: #2a2a3e;
+            --text: #cdd6f4;
+            --accent: #89b4fa;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--accent);
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: #181825;
+            color: var(--text);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #1e1e2e;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta {
+            font-size: 0.8em;
+            color: #7f849c;
+            margin-top: 4px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        #status {
+            font-size: 0.8em;
+            margin-left: 10px;
+            color: #a6e3a1;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* 进度条容器：给它一个独立的背景色，稍微区别于背景，形成“卡槽”感 */
+        .progress-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 顶部信息栏：左边状态，右边百分比 */
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        #uploadStatusTitle {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+            display: inline-block;
+        }
+
+        /* 进度条本体：圆角，更现代 */
+        progress {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: none;
+            /* 兼容性设置 */
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        /* 进度条背景槽 */
+        progress::-webkit-progress-bar {
+            background-color: #181825;
+            border-radius: 6px;
+        }
+
+        /* 进度条填充色 (Dracula Pink/Purple Gradient) */
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, #cba6f7, #f38ba8);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        /* 底部信息栏：左边详情，右边取消按钮 */
+        .progress-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* 垂直居中 */
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #a6adc8;
+            /* 稍微淡一点的文字颜色 */
+        }
+
+        /* 详情文字区域 */
+        .progress-details {
+            font-family: monospace;
+            /* 等宽字体，数字不跳动 */
+            opacity: 0.8;
+        }
+
+        /* 优化后的取消按钮：小巧、放在右下角 */
+        .btn-cancel {
+            background: rgba(243, 139, 168, 0.15);
+            /* 淡淡的红色背景 */
+            color: #f38ba8;
+            border: 1px solid rgba(243, 139, 168, 0.3);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #f38ba8;
+            color: #1e1e2e;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="card">
@@ -36,6 +207,21 @@
             <div style="margin-bottom: 15px;">
                 <input type="file" id="fileInput" style="display: none" onchange="uploadFile()">
                 <button class="btn" onclick="document.getElementById('fileInput').click()">+ Upload File</button>
+                <div id="progressContainer" class="progress-box" style="display: none;">
+                    <div class="progress-header">
+                        <span id="uploadStatusTitle" style="color: var(--text)">🚀 Preparing...</span>
+                        <span id="percentText" style="color: var(--accent)">0%</span>
+                    </div>
+
+                    <progress id="progressBar" value="0" max="100"></progress>
+
+                    <div class="progress-footer">
+                        <div id="uploadDetails" class="progress-details">
+                            Waiting for data...
+                        </div>
+                        <button id="cancelBtn" onclick="abortUpload()" class="btn-cancel">✖ Cancel</button>
+                    </div>
+                </div>
                 <span id="uploadStatus" style="margin-left: 10px; font-size: 0.9em;"></span>
             </div>
             <div id="fileList"></div>
@@ -44,27 +230,38 @@
 
     <script>
         const evtSource = new EventSource("/events");
-        const clipInput = document.getElementById('clipInput');
 
-        // 1. SSE 监听事件
+        // === 1. 全局 DOM 元素获取 (修复核心：让所有函数都能找到这些元素) ===
+        const clipInput = document.getElementById('clipInput');
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusTitle = document.getElementById('uploadStatusTitle'); // 顶部标题
+        const percentText = document.getElementById('percentText');       // 右上角百分比
+        const detailsText = document.getElementById('uploadDetails');     // 左下角详情
+        const cancelBtn = document.getElementById('cancelBtn');
+        const uploadStatusSpan = document.getElementById('uploadStatus'); // 那个旧的外部span，防止报错保留着
+
+        let currentXhr = null;
+
+        // === 2. SSE 监听事件 ===
         evtSource.addEventListener('clipboard', (e) => {
             const data = JSON.parse(e.data);
-            // 如果当前输入框没有焦点，则更新，防止覆盖正在打字的内容
             if (document.activeElement !== clipInput) {
                 clipInput.value = data.content;
             }
         });
 
         evtSource.addEventListener('files_update', (e) => {
-            loadFiles(); // 收到信号，重新拉取列表
+            loadFiles();
         });
 
-        // 2. 剪贴板逻辑
+        // === 3. 剪贴板逻辑 ===
         async function pushClipboard() {
             await fetch('/api/clipboard', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({content: clipInput.value})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: clipInput.value })
             });
             showStatus();
         }
@@ -75,25 +272,158 @@
             clipInput.value = data.content;
         }
 
-        // 3. 文件逻辑
+        // === 4. 取消逻辑 (修复：使用全局变量) ===
+        function abortUpload() {
+            if (currentXhr) {
+                currentXhr.abort(); // 这会触发 xhr.onabort
+                currentXhr = null;
+
+                // UI 反馈
+                statusTitle.innerText = "🛑 Cancelled";
+                statusTitle.style.color = "#f38ba8"; // Red
+                detailsText.innerText = "User aborted operation";
+
+                // 延迟关闭进度条
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    // 重置颜色，防止下次打开还是红的
+                    statusTitle.style.color = "var(--text)";
+                }, 2000);
+            }
+        }
+
+        // === 辅助函数 ===
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatTime(seconds) {
+            if (!isFinite(seconds) || seconds < 0) return 'Calculating...';
+            const h = Math.floor(seconds / 3600);
+            if (h > 0) {
+                second_in_minute = scends - h * 3600
+                const m = Math.floor(second_in_minute / 60);
+                const s = Math.floor(seconds % 60);
+                return `${h}h ${m}m ${s < 10 ? '0' : ''}${s}s`;
+            } else {
+                const m = Math.floor(seconds / 60);
+                const s = Math.floor(seconds % 60);
+                return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+            }
+        }
+
+        // === 5. 文件上传逻辑 ===
         async function uploadFile() {
-            const input = document.getElementById('fileInput');
-            if (input.files.length === 0) return;
-            
+            if (fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
             const formData = new FormData();
-            formData.append('file', input.files[0]);
-            
-            document.getElementById('uploadStatus').innerText = "Uploading...";
-            await fetch('/api/upload', { method: 'POST', body: formData });
-            document.getElementById('uploadStatus').innerText = "";
-            input.value = ''; // Reset
+            formData.append('file', file);
+
+            // 如果有正在进行的任务，先取消
+            if (currentXhr) {
+                currentXhr.abort();
+            }
+
+            // 初始化 UI (重置状态)
+            progressContainer.style.display = 'block';
+            cancelBtn.style.display = 'block';
+            progressBar.value = 0;
+            statusTitle.innerText = `🚀 Uploading: ${file.name}`;
+            statusTitle.style.color = "var(--text)"; // 重置回白色
+            percentText.innerText = "0%";
+            detailsText.innerText = "Calculating...";
+            uploadStatusSpan.innerText = ""; // 清空旧的外部提示
+
+            let startTime = Date.now();
+            let lastTime = startTime;
+            let lastLoaded = 0;
+            let uploadSpeed = 0;
+
+            const xhr = new XMLHttpRequest();
+            currentXhr = xhr;
+            xhr.open('POST', '/api/upload', true);
+
+            // 监听进度
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    const now = Date.now();
+                    const diffTime = (now - lastTime) / 1000;
+
+                    if (diffTime >= 0.5 || e.loaded === e.total) {
+                        const diffLoaded = e.loaded - lastLoaded;
+                        uploadSpeed = diffLoaded / diffTime;
+
+                        const remainingBytes = e.total - e.loaded;
+                        const etaSeconds = uploadSpeed > 0 ? remainingBytes / uploadSpeed : 0;
+
+                        lastTime = now;
+                        lastLoaded = e.loaded;
+
+                        const percent = (e.loaded / e.total) * 100;
+                        progressBar.value = percent;
+                        percentText.innerText = percent.toFixed(1) + '%';
+
+                        detailsText.innerHTML =
+                            `📦 ${formatSize(e.loaded)}/${formatSize(e.total)} &nbsp;` +
+                            `⚡ ${formatSize(uploadSpeed)}/s &nbsp;` +
+                            `⏳ ${formatTime(etaSeconds)}`;
+                    }
+
+                    if (e.loaded === e.total) {
+                        statusTitle.innerText = "💾 Server Saving...";
+                        statusTitle.style.color = "#f9e2af"; // Yellow
+                        detailsText.innerText = "Finalizing storage...";
+                        cancelBtn.style.display = 'none'; // 保存阶段不能取消
+                    }
+                }
+            };
+
+            // 完成处理
+            xhr.onload = function () {
+                currentXhr = null;
+                if (xhr.status === 200) {
+                    statusTitle.innerText = "✅ Complete!";
+                    statusTitle.style.color = "#a6e3a1"; // Green
+                    percentText.innerText = "100%";
+                    detailsText.innerText = `Done in ${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+                    fileInput.value = ''; // 清空选择
+
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 3000);
+                } else {
+                    statusTitle.innerText = "❌ Error";
+                    statusTitle.style.color = "#f38ba8";
+                    detailsText.innerText = "Server Error: " + xhr.statusText;
+                }
+            };
+
+            // 错误处理
+            xhr.onerror = function () {
+                currentXhr = null;
+                statusTitle.innerText = "❌ Network Error";
+                statusTitle.style.color = "#f38ba8";
+                detailsText.innerText = "Check connection / Timeout";
+            };
+
+            // 中断处理 (修正：这里不需要做UI操作了，交给 abortUpload 函数做，防止冲突)
+            xhr.onabort = function () {
+                console.log("XHR Aborted");
+            };
+
+            xhr.send(formData);
         }
 
         async function loadFiles() {
             const res = await fetch('/api/files');
             const files = await res.json();
             const container = document.getElementById('fileList');
-            
+
             container.innerHTML = files.map(f => {
                 const size = (f.size / 1024 / 1024).toFixed(2) + ' MB';
                 const date = new Date(f.upload_time * 1000).toLocaleString();
@@ -120,4 +450,5 @@
         loadFiles();
     </script>
 </body>
+
 </html>

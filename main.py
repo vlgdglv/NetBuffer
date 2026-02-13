@@ -11,9 +11,10 @@ from sse_starlette import EventSourceResponse
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FDIR = os.path.join(BASE_DIR, 'uploads')
+UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
 DB_PATH = os.path.join(BASE_DIR, "db.sqlite")
-os.makedirs(UPLOAD_FDIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+CHUNK_SIZE = 64 * 1024 * 1024
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -42,7 +43,7 @@ async def init_db():
 async def cleanup_loop():
     while True:
         try:
-            await asyncio.sleep(100)
+            await asyncio.sleep(4 * 3600)
             now = time.time()
             async with aiosqlite.connect(DB_PATH) as db:
                 async with db.execute("SELECT id, filepath FROM files WHERE expires_at < ?", (now,)) as cursor:
@@ -155,15 +156,21 @@ async def list_files():
 async def upload_file(file: UploadFile, background_tasks: BackgroundTasks):
     filename = file.filename
     save_name = f"{int(time.time())}_{filename}"
-    file_path = os.path.join(UPLOAD_FDIR, save_name)
+    file_path = os.path.join(UPLOAD_DIR, save_name)
     
     size = 0
-    with open(file_path, "wb") as buffer:
-        while content := await file.read(1024 * 1024):
-            buffer.write(content)
-            size += len(content)
+    try:
+        with open(file_path, "wb") as buffer:
+            while True:
+                content = await file.read(CHUNK_SIZE)
+                if not content:
+                    break
+                buffer.write(content)
+                size += len(content)
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
             
-    expires_at = time.time() + (1*60*60)
+    expires_at = time.time() + (24*60*60)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "INSERT INTO files (filename, filepath, size, upload_time, expires_at) VALUES (?, ?, ?, ?, ?)",
