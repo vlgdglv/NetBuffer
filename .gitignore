@@ -2,3 +2,5 @@
 uploads/
 
 db.sqlite
+
+__pycache__/

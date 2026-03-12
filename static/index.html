@@ -69,6 +69,16 @@
             opacity: 0.9;
         }
 
+        .btn-secondary {
+            background: #45475a;
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #585b70;
+            opacity: 1;
+        }
+
         .file-item {
             display: flex;
             justify-content: space-between;
@@ -95,7 +105,8 @@
 
         #status {
             font-size: 0.8em;
-            margin-left: 10px;
+            margin-top: 10px;
+            margin-left: 5px;
             color: #a6e3a1;
             opacity: 0;
             transition: opacity 0.5s;
@@ -196,8 +207,9 @@
         <div class="card">
             <h2>📋 Sync Clipboard</h2>
             <textarea id="clipInput" placeholder="Type or paste content here..."></textarea>
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
                 <button class="btn" onclick="pushClipboard()">Sync to Network</button>
+                <button id="copyBtn" class="btn btn-secondary" onclick="copyToLocal()">📋 Copy</button>
                 <span id="status">Synced!</span>
             </div>
         </div>
@@ -444,7 +456,53 @@
             el.style.opacity = 1;
             setTimeout(() => el.style.opacity = 0, 2000);
         }
+        
+        async function copyToLocal() {
+            const textToCopy = clipInput.value;
+            if (!textToCopy) return;
 
+            let copySuccess = false;
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textToCopy);
+                    copySuccess = true;
+                } 
+                
+                else {
+                    clipInput.select();
+                    clipInput.setSelectionRange(0, 99999);
+
+                    copySuccess = document.execCommand("copy");
+                    
+                    window.getSelection().removeAllRanges();
+                    clipInput.blur(); 
+                }
+
+                if (copySuccess) {
+                    const copyBtn = document.getElementById('copyBtn');
+                    const originalText = copyBtn.innerText;
+                    const originalBg = copyBtn.style.background;
+                    const originalColor = copyBtn.style.color;
+
+                    copyBtn.innerText = "✅ Copied!";
+                    copyBtn.style.background = "#a6e3a1"; // Success green
+                    copyBtn.style.color = "#1e1e2e";
+
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                        copyBtn.style.background = originalBg;
+                        copyBtn.style.color = originalColor;
+                    }, 2000);
+                } else {
+                    throw new Error("execCommand failed");
+                }
+
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert("Copy failed. Please manually select and copy.");
+            }
+        }
         // Init
         initClipboard();
         loadFiles();
